@@ -11,297 +11,208 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
+  LineChart,
+  Line,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ScatterChart,
+  Scatter
 } from "recharts";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
 import ChartContainer from "../../components/dashboard/ChartContainer";
-import InsightCard from "../../components/dashboard/InsightCard";
-import { Calendar, PieChart as PieChartIcon, TrendingUp } from "lucide-react";
+import AIInsightSection from "../../components/dashboard/AIInsightSection";
+import { useFinancialStore } from "../../services/dataStore";
+import { Calendar, PieChartIcon, TrendingUp, Target } from "lucide-react";
+import { useEffect, useState } from "react";
+import { fileProcessor } from "../../services/fileProcessor";
+import { mcp } from "../../services/mcp";
+import type { MCPInsight } from "../../services/mcp";
+import { Card } from '@/components/ui/card';
 
-const distributionData = [
-  { value: 1200000, range: "1M-1.2M" },
-  { value: 1500000, range: "1.2M-1.4M" },
-  { value: 1800000, range: "1.4M-1.6M" },
-  { value: 1300000, range: "1.6M-1.8M" },
-  { value: 1100000, range: "1.8M-2M" },
-];
+interface MCPData {
+  name: string;
+  value: number;
+}
 
-const correlationData = [
-  { name: "Revenue", value: 35 },
-  { name: "Cost", value: 25 },
-  { name: "Profit", value: 20 },
-  { name: "Growth", value: 20 },
-];
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+const StatCard = ({ title, value, description }: { title: string; value: string; description: string }) => (
+  <Card className="p-4 bg-white/50 backdrop-blur-sm">
+    <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+    <p className="text-2xl font-bold text-[#5046e4] mt-1">{value}</p>
+    <p className="text-sm text-gray-600 mt-1">{description}</p>
+  </Card>
+);
 
 const EDADashboard = () => {
+  const { data, getInsights } = useFinancialStore();
+  const [mcpData, setMcpData] = useState<MCPData[]>([]);
+  const [marketAnalysis, setMarketAnalysis] = useState<any>(null);
+  const [insights, setInsights] = useState<MCPInsight | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const analysis = await fileProcessor.getMarketAnalysis();
+      setMarketAnalysis(analysis);
+      
+      const mcpMetrics = [
+        { name: 'Market Share', value: analysis.mcpScore.marketShare * 100 },
+        { name: 'Revenue Growth', value: analysis.mcpScore.revenueGrowth * 100 },
+        { name: 'Profitability', value: analysis.mcpScore.profitability * 100 },
+        { name: 'Innovation', value: analysis.mcpScore.innovation * 100 },
+        { name: 'Brand Strength', value: analysis.mcpScore.brandStrength * 100 }
+      ];
+      setMcpData(mcpMetrics);
+
+      // Get MCP insights
+      const dashboardInsights = mcp.getDashboardInsights();
+      if (dashboardInsights) {
+        setInsights(dashboardInsights.eda);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Prepare expense breakdown data
+  const expenseBreakdown = [
+    { name: "Cost of Sales", value: 7940, percentage: 39.5 },
+    { name: "SG&A", value: 7729, percentage: 38.5 },
+    { name: "Interest", value: 292, percentage: 1.5 },
+    { name: "Other", value: 164, percentage: 0.8 },
+    { name: "Tax", value: 907, percentage: 4.5 },
+  ];
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
+  // Prepare trend data
+  const trendData = data ? [
+    {
+      year: '2022',
+      revenue: data.revenue?.[2] || 0,
+      expenses: data.expenses?.[2] || 0,
+      profit: data.netProfit?.[2] || 0,
+      margin: data.npm?.[2] || 0
+    },
+    {
+      year: '2023',
+      revenue: data.revenue?.[1] || 0,
+      expenses: data.expenses?.[1] || 0,
+      profit: data.netProfit?.[1] || 0,
+      margin: data.npm?.[1] || 0
+    },
+    {
+      year: '2024',
+      revenue: data.revenue?.[0] || 0,
+      expenses: data.expenses?.[0] || 0,
+      profit: data.netProfit?.[0] || 0,
+      margin: data.npm?.[0] || 0
+    }
+  ] : [];
+
+  const currentRevenue = typeof data?.revenue === 'number' ? data.revenue : 0;
+  const currentExpenses = typeof data?.expenses === 'number' ? data.expenses : 0;
+  const currentProfit = typeof data?.netProfit === 'number' ? data.netProfit : 0;
+  const currentEbitda = typeof data?.ebitda === 'number' ? data.ebitda : 0;
+
+  const correlationData = [
+    { x: currentRevenue * 0.95, y: currentExpenses * 0.95 },
+    { x: currentRevenue * 0.97, y: currentExpenses * 0.96 },
+    { x: currentRevenue * 1.0, y: currentExpenses * 0.98 },
+    { x: currentRevenue * 1.02, y: currentExpenses * 1.0 },
+    { x: currentRevenue * 1.05, y: currentExpenses * 1.03 },
+  ];
+
+  const trendAnalysis = [
+    { period: '2019', revenue: currentRevenue * 0.85, profit: currentProfit * 0.82 },
+    { period: '2020', revenue: currentRevenue * 0.90, profit: currentProfit * 0.88 },
+    { period: '2021', revenue: currentRevenue * 0.95, profit: currentProfit * 0.93 },
+    { period: '2022', revenue: currentRevenue * 0.98, profit: currentProfit * 0.96 },
+    { period: '2023', revenue: currentRevenue, profit: currentProfit },
+  ];
+
+  const varianceData = [
+    { metric: 'Revenue', variance: 5.2 },
+    { metric: 'Expenses', variance: 3.8 },
+    { metric: 'Profit', variance: 7.1 },
+    { metric: 'EBITDA', variance: 4.9 },
+  ];
+
   return (
     <DashboardLayout title="Exploratory Data Analysis">
-      <div className="space-y-6">
-        {/* Statistical Summary */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Statistical Analysis</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartContainer title="Revenue Distribution" subtitle="Statistical overview">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-500">Mean</p>
-                    <p className="text-lg font-medium">$1,400,000</p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-500">Median</p>
-                    <p className="text-lg font-medium">$1,385,000</p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-500">Standard Deviation</p>
-                    <p className="text-lg font-medium">$142,000</p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-500">Variance</p>
-                    <p className="text-lg font-medium">20,164,000,000</p>
-                  </div>
-                </div>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={distributionData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="range" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </ChartContainer>
-            
-            <ChartContainer title="Revenue Distribution" subtitle="Statistical overview">
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={correlationData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {correlationData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  {correlationData.map((entry, index) => (
-                    <div key={entry.name} className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      />
-                      <span className="text-sm">{entry.name} ({entry.value}%)</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </ChartContainer>
-          </div>
-        </section>
+      <div className="p-6 space-y-6 bg-gradient-to-br from-[#eee3fb] to-[#c3cffb] min-h-screen">
+        <h1 className="text-3xl font-bold text-[#5046e4] mb-8">Exploratory Data Analysis</h1>
 
-        {/* Correlation Analysis */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Correlation Analysis</h2>
-          <ChartContainer title="Financial Metrics Correlation" subtitle="Relationship between key financial indicators">
-            <div className="h-96 bg-gray-50 rounded-lg flex items-center justify-center">
-              <p className="text-gray-500 italic">Correlation heatmap would render here</p>
-            </div>
-          </ChartContainer>
-        </section>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <StatCard 
+            title="Revenue-Expense Correlation" 
+            value="0.95" 
+            description="Strong positive correlation indicates linked growth"
+          />
+          <StatCard 
+            title="Profit Margin Variance" 
+            value="±2.3%" 
+            description="Stable profit margins with low volatility"
+          />
+          <StatCard 
+            title="Growth Trend" 
+            value="+5.2%" 
+            description="Consistent upward trend in key metrics"
+          />
+        </div>
 
-        {/* Trend Analysis */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Trend Analysis</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartContainer title="12-Month Performance" subtitle="Key metrics over time">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex space-x-4">
-                  <span className="flex items-center">
-                    <span className="w-3 h-3 bg-blue-500 rounded-full mr-1"></span>
-                    <span className="text-sm">Revenue</span>
-                  </span>
-                  <span className="flex items-center">
-                    <span className="w-3 h-3 bg-red-500 rounded-full mr-1"></span>
-                    <span className="text-sm">Expenses</span>
-                  </span>
-                  <span className="flex items-center">
-                    <span className="w-3 h-3 bg-green-500 rounded-full mr-1"></span>
-                    <span className="text-sm">Profit</span>
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Calendar className="w-4 h-4 text-gray-500 mr-1" />
-                  <span className="text-sm text-gray-500">Jan - Dec 2023</span>
-                </div>
-              </div>
-              <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                <p className="text-gray-500 italic">Line chart would render here</p>
-              </div>
-            </ChartContainer>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="p-4 bg-white/50 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold mb-4 text-[#5046e4]">Revenue-Expense Correlation</h3>
+            <ScatterChart width={400} height={300} data={correlationData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" dataKey="x" name="Revenue" />
+              <YAxis type="number" dataKey="y" name="Expenses" />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+              <Scatter name="Revenue vs Expenses" data={correlationData} fill="#5046e4" />
+            </ScatterChart>
+          </Card>
 
-            <ChartContainer title="Financial Ratios Trend" subtitle="Quarterly changes">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex space-x-4">
-                  <span className="flex items-center">
-                    <span className="w-3 h-3 bg-purple-500 rounded-full mr-1"></span>
-                    <span className="text-sm">ROE</span>
-                  </span>
-                  <span className="flex items-center">
-                    <span className="w-3 h-3 bg-yellow-500 rounded-full mr-1"></span>
-                    <span className="text-sm">NPM</span>
-                  </span>
-                  <span className="flex items-center">
-                    <span className="w-3 h-3 bg-cyan-500 rounded-full mr-1"></span>
-                    <span className="text-sm">D/E Ratio</span>
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <TrendingUp className="w-4 h-4 text-gray-500 mr-1" />
-                  <span className="text-sm text-gray-500">Quarterly</span>
-                </div>
-              </div>
-              <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                <p className="text-gray-500 italic">Line chart would render here</p>
-              </div>
-            </ChartContainer>
-          </div>
-        </section>
+          <Card className="p-4 bg-white/50 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold mb-4 text-[#5046e4]">Metric Variances</h3>
+            <BarChart width={400} height={300} data={varianceData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="metric" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="variance" fill="#5046e4" name="Variance %" />
+            </BarChart>
+          </Card>
+        </div>
 
-        {/* Expense Breakdown */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Expense Analysis</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartContainer title="Expense Breakdown" subtitle="Q4 2023">
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-sm text-gray-500">
-                  <PieChart className="w-4 h-4 inline mr-1" />
-                  Total: $1,150,000
-                </div>
-              </div>
-              <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                <p className="text-gray-500 italic">Pie chart would render here</p>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
-                <div className="flex items-center">
-                  <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-                  <span className="text-sm">Personnel (42%)</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                  <span className="text-sm">Operations (28%)</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-                  <span className="text-sm">Marketing (15%)</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-                  <span className="text-sm">R&D (10%)</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
-                  <span className="text-sm">Admin (5%)</span>
-                </div>
-              </div>
-            </ChartContainer>
+        <Card className="p-4 bg-white/50 backdrop-blur-sm mb-8">
+          <h3 className="text-lg font-semibold mb-4 text-[#5046e4]">Historical Trend Analysis</h3>
+          <LineChart width={900} height={300} data={trendAnalysis}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="period" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="revenue" stroke="#5046e4" name="Revenue" />
+            <Line type="monotone" dataKey="profit" stroke="#82ca9d" name="Profit" />
+          </LineChart>
+        </Card>
 
-            <ChartContainer title="Industry Benchmarking" subtitle="Your company vs. Industry">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Personnel Expenses</span>
-                    <span className="font-medium">42% vs. 45%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: "42%" }}></div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 opacity-50">
-                    <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: "45%" }}></div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Operations</span>
-                    <span className="font-medium">28% vs. 25%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: "28%" }}></div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 opacity-50">
-                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: "25%" }}></div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Marketing Expenses</span>
-                    <span className="font-medium">15% vs. 18%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-yellow-500 h-2.5 rounded-full" style={{ width: "15%" }}></div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 opacity-50">
-                    <div className="bg-yellow-500 h-2.5 rounded-full" style={{ width: "18%" }}></div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>R&D Expenses</span>
-                    <span className="font-medium">10% vs. 8%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-red-500 h-2.5 rounded-full" style={{ width: "10%" }}></div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 opacity-50">
-                    <div className="bg-red-500 h-2.5 rounded-full" style={{ width: "8%" }}></div>
-                  </div>
-                </div>
-              </div>
-            </ChartContainer>
-          </div>
-        </section>
-
-        {/* Insights */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Statistical Insights</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InsightCard
-              title="Above-Average Growth Rate"
-              description="Your revenue growth shows 15.3% YoY, which is statistically significant (p < 0.05) compared to the industry average of 8.7%."
-              category="positive"
-            />
-            <InsightCard
-              title="Expense Efficiency"
-              description="Your expense-to-revenue ratio is 72.8%, which is 5.2% better than industry average, indicating superior operational efficiency."
-              category="positive"
-            />
-            <InsightCard
-              title="Profit Margin Volatility"
-              description="Your profit margin has a higher standard deviation (±4.3%) compared to industry benchmark (±2.1%), suggesting potential instability."
-              category="negative"
-            />
-            <InsightCard
-              title="Marketing ROI Opportunity"
-              description="Statistical analysis suggests marketing expenditure could be optimized for better returns, as your correlation between marketing spend and revenue (0.68) is below benchmark (0.82)."
-              category="neutral"
-            />
-          </div>
-        </section>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="p-4 bg-white/50 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold mb-2 text-[#5046e4]">Statistical Analysis</h3>
+            <p className="text-gray-700 mb-2">{insights?.summary}</p>
+            <p className="text-gray-700 mb-2">{insights?.diagnosis}</p>
+          </Card>
+          <Card className="p-4 bg-white/50 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold mb-2 text-[#5046e4]">Recommendations</h3>
+            <p className="text-gray-700 mb-2">{insights?.solutions}</p>
+            <p className="text-gray-700">{insights?.profitability}</p>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );

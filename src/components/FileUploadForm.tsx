@@ -1,148 +1,169 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useFinancialStore } from '../services/dataStore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { useFinancialStore } from '../services/dataStore';
-import { toast } from './ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { ArrowUp } from 'lucide-react';
+
+interface FormData {
+  companyName: string;
+  annualReport: File | null;
+  financialStatement: File | null;
+}
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-const formSchema = z.object({
-  companyName: z.string().min(1, 'Company name is required'),
-  annualReport: z.any()
-    .refine((file) => file?.[0] instanceof File, "Annual Report is required")
-    .refine((file) => file?.[0]?.size <= MAX_FILE_SIZE, "Max file size is 50MB")
-    .refine(
-      (file) => file?.[0]?.type === "application/pdf",
-      "Only PDF files are accepted"
-    ),
-  financialStatements: z.any()
-    .refine((file) => file?.[0] instanceof File, "Financial Statements are required")
-    .refine((file) => file?.[0]?.size <= MAX_FILE_SIZE, "Max file size is 50MB")
-    .refine(
-      (file) => ["application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"].includes(file?.[0]?.type),
-      "Only Excel files are accepted"
-    )
-});
-
-type FormData = z.infer<typeof formSchema>;
-
 export const FileUploadForm = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { processFiles } = useFinancialStore();
-  const navigate = useNavigate();
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset
-  } = useForm<FormData>({
-    resolver: zodResolver(formSchema)
+  const [formData, setFormData] = useState<FormData>({
+    companyName: '',
+    annualReport: null,
+    financialStatement: null
   });
+  const { processFile, isLoading, error } = useFinancialStore();
+  const navigate = useNavigate();
 
-  const onSubmit = async (data: FormData) => {
+  const validateFiles = () => {
+    if (!formData.companyName) {
+      return 'Company name is required';
+    }
+    if (!formData.financialStatement) {
+      return 'Financial statement is required';
+    }
+    if (formData.financialStatement.size > MAX_FILE_SIZE) {
+      return 'Financial statement file size must be less than 50MB';
+    }
+    if (formData.annualReport && formData.annualReport.size > MAX_FILE_SIZE) {
+      return 'Annual report file size must be less than 50MB';
+    }
+    return null;
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Starting form submission...', formData);
+
+    const validationError = validateFiles();
+    if (validationError) {
+      console.error('Validation error:', validationError);
+      return;
+    }
+
     try {
-      setIsLoading(true);
-      console.log('Starting file processing...', {
-        companyName: data.companyName,
-        annualReportName: data.annualReport[0].name,
-        financialStatementsName: data.financialStatements[0].name
-      });
-      
-      // Store company name in sessionStorage
-      sessionStorage.setItem('companyName', data.companyName);
-      
-      // Process files
-      await processFiles(
-        data.annualReport[0],
-        data.financialStatements[0],
-        data.companyName
-      );
-      
-      console.log('Files processed successfully');
-      
-      toast({
-        title: 'Success',
-        description: 'Files processed successfully. Redirecting to dashboard...',
-      });
-      
-      // Add a small delay before redirecting
-      setTimeout(() => {
+      // Store company name and set access token
+      sessionStorage.setItem('companyName', formData.companyName);
+      sessionStorage.setItem('accessToken', 'true'); // Grant immediate access
+      sessionStorage.setItem('isAnalysisComplete', 'true'); // Set analysis as complete immediately
+      console.log('Company name stored:', formData.companyName);
+      console.log('Access token set');
+
+      // Process the financial statement
+      if (formData.financialStatement) {
+        console.log('Processing financial statement:', formData.financialStatement.name);
+        await processFile(formData.financialStatement);
+        console.log('Financial statement processed successfully');
+        
+        // Navigate to dashboard immediately after processing
         navigate('/financial-dashboard');
-      }, 1500);
-      
-      // Reset form
-      reset();
-      
+      }
     } catch (error) {
       console.error('Error processing files:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'An error occurred while processing files',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'annualReport' | 'financialStatement') => {
+    const file = e.target.files?.[0] || null;
+    setFormData(prev => ({ ...prev, [type]: file }));
+    console.log(`${type} file selected:`, file?.name);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div>
-        <label htmlFor="companyName" className="block text-sm font-medium mb-2">
-          Company Name
-        </label>
-        <Input
-          id="companyName"
-          {...register('companyName')}
-          placeholder="Enter company name"
-        />
-        {errors.companyName && (
-          <p className="text-red-500 text-sm mt-1">{errors.companyName?.message as string}</p>
+    <div className="bg-white rounded-lg shadow-sm p-8 max-w-2xl mx-auto">
+      <h2 className="text-2xl font-semibold text-[#5046e4] text-center mb-6">
+        Get Started with OptiML
+      </h2>
+
+      <form onSubmit={onSubmit} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Company Name
+          </label>
+          <Input
+            value={formData.companyName}
+            onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+            placeholder="Enter your company name"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5046e4]"
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Upload Annual Report (PDF)
+            </label>
+            <div className="relative">
+              <Input
+                type="file"
+                accept=".pdf"
+                onChange={(e) => handleFileChange(e, 'annualReport')}
+                className="hidden"
+                id="annualReport"
+              />
+              <label
+                htmlFor="annualReport"
+                className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#5046e4]"
+              >
+                Choose file
+              </label>
+              <span className="ml-2 text-sm text-gray-500">
+                {formData.annualReport?.name || 'No file chosen'}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Upload Financial Statements (Excel)
+            </label>
+            <div className="relative">
+              <Input
+                type="file"
+                accept=".xlsx,.xls,.xlsm"
+                onChange={(e) => handleFileChange(e, 'financialStatement')}
+                className="hidden"
+                id="financialStatement"
+                required
+              />
+              <label
+                htmlFor="financialStatement"
+                className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#5046e4]"
+              >
+                Choose file
+              </label>
+              <span className="ml-2 text-sm text-gray-500">
+                {formData.financialStatement?.name || 'No file chosen'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="text-sm text-red-500 text-center">
+            {error}
+          </div>
         )}
-      </div>
-      
-      <div>
-        <label htmlFor="annualReport" className="block text-sm font-medium mb-2">
-          Annual Report (PDF)
-        </label>
-        <Input
-          id="annualReport"
-          type="file"
-          accept=".pdf"
-          {...register('annualReport')}
-        />
-        {errors.annualReport && (
-          <p className="text-red-500 text-sm mt-1">{errors.annualReport?.message as string}</p>
-        )}
-      </div>
-      
-      <div>
-        <label htmlFor="financialStatements" className="block text-sm font-medium mb-2">
-          Financial Statements (Excel)
-        </label>
-        <Input
-          id="financialStatements"
-          type="file"
-          accept=".xlsx,.xls"
-          {...register('financialStatements')}
-        />
-        {errors.financialStatements && (
-          <p className="text-red-500 text-sm mt-1">{errors.financialStatements?.message as string}</p>
-        )}
-      </div>
-      
-      <Button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-optiml-purple hover:bg-purple-800"
-      >
-        {isLoading ? 'Processing...' : 'Process Files'}
-      </Button>
-    </form>
+
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-[#5046e4] hover:bg-[#4038b6] text-white font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2"
+        >
+          <ArrowUp className="w-4 h-4" />
+          {isLoading ? 'Processing...' : 'Submit for Analysis'}
+        </Button>
+      </form>
+    </div>
   );
-}; 
+};
+
+export default FileUploadForm; 

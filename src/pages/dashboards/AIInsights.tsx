@@ -1,352 +1,392 @@
-
+import { Brain, TrendingUp, DollarSign, AlertTriangle, Target } from "lucide-react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
-import ChartContainer from "../../components/dashboard/ChartContainer";
+import { useFinancialStore } from "../../services/dataStore";
 import InsightCard from "../../components/dashboard/InsightCard";
-import { Brain, LineChart, TrendingUp, Zap } from "lucide-react";
+import ChartContainer from "../../components/dashboard/ChartContainer";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar
+} from 'recharts';
+import { useEffect, useState } from "react";
+import { fileProcessor } from "../../services/fileProcessor";
+import { Card } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BarChart, Bar } from 'recharts';
 
 const AIInsights = () => {
-  // Mock AI insights data
-  const insights = {
-    revenue: [
-      {
-        title: "Optimize Product Mix",
-        description: "Shifting product mix to favor high-margin Product Line B could increase overall revenue by an estimated 8.3% without additional marketing spend.",
-        impact: "High",
-        category: "positive",
-        timeframe: "Medium-term",
-      },
-      {
-        title: "Regional Expansion Opportunity",
-        description: "Market analysis shows untapped potential in the Western region with 22% lower competition than your current primary markets.",
-        impact: "High",
-        category: "positive",
-        timeframe: "Long-term",
-      },
-    ],
-    cost: [
-      {
-        title: "Supplier Consolidation",
-        description: "Consolidating 4 smaller suppliers into your top 2 existing relationships could reduce procurement costs by an estimated 12.5%.",
-        impact: "Medium",
-        category: "positive",
-        timeframe: "Short-term",
-      },
-      {
-        title: "Operational Process Optimization",
-        description: "Automating inventory management could reduce labor costs by 15% and inventory carrying costs by 8.3%.",
-        impact: "Medium",
-        category: "positive",
-        timeframe: "Medium-term",
-      },
-    ],
-    risk: [
-      {
-        title: "Cash Flow Vulnerability",
-        description: "Current accounts receivable aging patterns indicate 15% of revenue has extended beyond optimal collection periods, posing liquidity risks.",
-        impact: "Medium",
-        category: "negative",
-        timeframe: "Short-term",
-      },
-      {
-        title: "Competitor Pricing Pressure",
-        description: "Competitor A has reduced prices by 7.5% in Q4 2023, potentially eroding your market share in the consumer segment.",
-        impact: "Medium",
-        category: "negative",
-        timeframe: "Short-term",
-      },
-    ],
-    predictions: [
-      {
-        title: "Revenue Growth Projection",
-        description: "Based on current trajectory and market conditions, our AI model predicts 17.8% YoY growth for 2024, exceeding your internal forecast of 15%.",
-        impact: "High",
-        category: "positive",
-        timeframe: "Long-term",
-      },
-      {
-        title: "Margin Compression Risk",
-        description: "Rising raw material costs projected to reduce gross margins by 1.2-1.8 percentage points in Q1-Q2 2024 unless mitigating actions are taken.",
-        impact: "Medium",
-        category: "negative",
-        timeframe: "Medium-term",
-      },
-    ],
+  const { data, getInsights } = useFinancialStore();
+  const [aiInsights, setAiInsights] = useState<any[]>([]);
+  const [mcpData, setMcpData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchInsights = async () => {
+      if (data) {
+        const insights = await fileProcessor.generateAIRecommendations(data);
+        setAiInsights(insights);
+        const marketAnalysis = await fileProcessor.getMarketAnalysis();
+        setMcpData(marketAnalysis);
+      }
+    };
+    fetchInsights();
+  }, [data]);
+
+  const getInsightIcon = (category: string) => {
+    switch (category) {
+      case 'profitability':
+        return <DollarSign className="w-5 h-5" />;
+      case 'cost':
+        return <TrendingUp className="w-5 h-5" />;
+      case 'risk':
+        return <AlertTriangle className="w-5 h-5" />;
+      case 'market':
+        return <Target className="w-5 h-5" />;
+      default:
+        return <Brain className="w-5 h-5" />;
+    }
   };
 
-  // Render impact badge
-  const renderImpactBadge = (impact: string) => {
-    let bgColor = "bg-blue-100 text-blue-800";
-    
-    if (impact === "High") {
-      bgColor = "bg-purple-100 text-purple-800";
-    } else if (impact === "Medium") {
-      bgColor = "bg-blue-100 text-blue-800";
-    } else if (impact === "Low") {
-      bgColor = "bg-gray-100 text-gray-800";
+  const profitabilityInsights = [
+    {
+      category: 'profitability',
+      title: 'Profit Margin Optimization',
+      description: `Increase net profit margin from 11.8% to 14.4% by reducing operating expenses by 5% (potential savings of $406M based on 2023 expenses of $8,131M).`,
+      confidence: 0.85
+    },
+    {
+      category: 'cost',
+      title: 'Supply Chain Efficiency',
+      description: `Optimize inventory management to reduce carrying costs. Current inventory of $1,987M can be optimized for $60M annual savings.`,
+      confidence: 0.75
+    },
+    {
+      category: 'risk',
+      title: 'Currency Risk Management',
+      description: `Implement hedging strategies to mitigate $343M currency impact on comprehensive income, protecting 1.8% of revenue exposed to currency risk.`,
+      confidence: 0.9
     }
-    
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor}`}>
-        {impact} Impact
-      </span>
-    );
-  };
+  ];
 
-  // Render timeframe badge
-  const renderTimeframeBadge = (timeframe: string) => {
-    let bgColor = "bg-gray-100 text-gray-800";
-    
-    if (timeframe === "Short-term") {
-      bgColor = "bg-green-100 text-green-800";
-    } else if (timeframe === "Medium-term") {
-      bgColor = "bg-yellow-100 text-yellow-800";
-    } else if (timeframe === "Long-term") {
-      bgColor = "bg-orange-100 text-orange-800";
-    }
-    
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor}`}>
-        {timeframe}
-      </span>
-    );
-  };
+  const currentRevenue = typeof data?.revenue === 'number' ? data.revenue : 0;
+  const currentProfit = typeof data?.netProfit === 'number' ? data.netProfit : 0;
+  const currentEbitda = typeof data?.ebitda === 'number' ? data.ebitda : 0;
+
+  const trendData = [
+    { month: 'Jan', actual: currentRevenue, predicted: currentRevenue * 1.05 },
+    { month: 'Feb', actual: currentRevenue, predicted: currentRevenue * 1.07 },
+    { month: 'Mar', actual: currentRevenue, predicted: currentRevenue * 1.1 },
+  ];
+
+  const mcpMetrics = mcpData ? [
+    { name: 'Market Share', value: mcpData.mcpScore.marketShare * 100 },
+    { name: 'Revenue Growth', value: mcpData.mcpScore.revenueGrowth * 100 },
+    { name: 'Profitability', value: mcpData.mcpScore.profitability * 100 },
+    { name: 'Innovation', value: mcpData.mcpScore.innovation * 100 },
+    { name: 'Brand Strength', value: mcpData.mcpScore.brandStrength * 100 }
+  ] : [];
+
+  const insights = getInsights('ai');
+
+  const performanceData = [
+    { metric: 'Revenue', current: currentRevenue, target: currentRevenue * 1.1 },
+    { metric: 'Profit', current: currentProfit, target: currentProfit * 1.15 },
+    { metric: 'EBITDA', current: currentEbitda, target: currentEbitda * 1.12 },
+  ];
 
   return (
-    <DashboardLayout title="AI Insights">
-      <div className="space-y-8">
-        {/* AI Summary */}
+    <DashboardLayout title="AI-Driven Insights">
+      <div className="space-y-6">
+        {/* Key Insights */}
         <section>
-          <ChartContainer 
-            title="Executive Summary" 
-            subtitle="AI-powered financial analysis and recommendations"
-          >
-            <div className="prose max-w-none text-gray-700">
-              <p>
-                Based on our analysis of your financial data and competitive landscape, OptiML has identified 
-                several high-impact opportunities to enhance your financial performance. Our AI models suggest that implementing 
-                the recommended strategies could potentially:
-              </p>
-              <ul className="list-disc pl-6 my-4">
-                <li>Increase revenue by an estimated <strong>8-10%</strong> within the next 12 months</li>
-                <li>Improve profit margins by <strong>2.5-3.2 percentage points</strong></li>
-                <li>Optimize operational efficiency to reduce costs by <strong>9-12%</strong></li>
-                <li>Strengthen competitive positioning against key market rivals</li>
-              </ul>
-              <p>
-                The following insights are prioritized based on potential impact, implementation feasibility, 
-                and alignment with industry benchmarks. Each recommendation includes specific actions and expected outcomes.
-              </p>
-            </div>
-          </ChartContainer>
-        </section>
-        
-        {/* Revenue Optimization */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <TrendingUp className="mr-2 h-6 w-6 text-optiml-purple" />
-            Revenue Optimization Insights
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {insights.revenue.map((insight, index) => (
-              <div 
-                key={index} 
-                className="bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition-shadow border-l-4 border-green-500"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold text-lg">{insight.title}</h3>
-                  <div className="flex space-x-2">
-                    {renderImpactBadge(insight.impact)}
-                    {renderTimeframeBadge(insight.timeframe)}
+          <h2 className="text-xl font-semibold mb-4">Profitability Optimization Insights</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {profitabilityInsights.map((insight, index) => (
+              <div key={index} className="bg-white rounded-lg shadow-sm p-6 border">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-optiml-light rounded-full">
+                    {getInsightIcon(insight.category)}
                   </div>
+                  <span className="text-sm text-gray-500">
+                    {(insight.confidence * 100).toFixed(0)}% confidence
+                  </span>
                 </div>
-                <p className="text-gray-700 mb-4">{insight.description}</p>
-                <div className="mt-auto pt-2 flex justify-between items-center border-t border-gray-100">
-                  <span className="text-sm text-gray-500">Confidence: 92%</span>
-                  <button className="text-optiml-purple text-sm font-medium hover:underline">
-                    View Details
-                  </button>
-                </div>
+                <h3 className="text-lg font-semibold mb-2">{insight.title}</h3>
+                <p className="text-gray-600 text-sm">{insight.description}</p>
               </div>
             ))}
           </div>
         </section>
-        
-        {/* Cost Reduction */}
+
+        {/* Performance Trends */}
         <section>
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <Zap className="mr-2 h-6 w-6 text-optiml-purple" />
-            Cost Optimization Insights
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {insights.cost.map((insight, index) => (
-              <div 
-                key={index} 
-                className="bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition-shadow border-l-4 border-blue-500"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold text-lg">{insight.title}</h3>
-                  <div className="flex space-x-2">
-                    {renderImpactBadge(insight.impact)}
-                    {renderTimeframeBadge(insight.timeframe)}
-                  </div>
-                </div>
-                <p className="text-gray-700 mb-4">{insight.description}</p>
-                <div className="mt-auto pt-2 flex justify-between items-center border-t border-gray-100">
-                  <span className="text-sm text-gray-500">Confidence: 87%</span>
-                  <button className="text-optiml-purple text-sm font-medium hover:underline">
-                    View Details
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        
-        {/* Risk Management */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <Brain className="mr-2 h-6 w-6 text-optiml-purple" />
-            Strategic Risk Insights
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {insights.risk.map((insight, index) => (
-              <div 
-                key={index} 
-                className="bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition-shadow border-l-4 border-red-500"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold text-lg">{insight.title}</h3>
-                  <div className="flex space-x-2">
-                    {renderImpactBadge(insight.impact)}
-                    {renderTimeframeBadge(insight.timeframe)}
-                  </div>
-                </div>
-                <p className="text-gray-700 mb-4">{insight.description}</p>
-                <div className="mt-auto pt-2 flex justify-between items-center border-t border-gray-100">
-                  <span className="text-sm text-gray-500">Confidence: 83%</span>
-                  <button className="text-optiml-purple text-sm font-medium hover:underline">
-                    View Details
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        
-        {/* Predictions */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <LineChart className="mr-2 h-6 w-6 text-optiml-purple" />
-            Financial Forecasts & Predictions
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ChartContainer title="Revenue Forecast (2024)" subtitle="Quarterly projection">
-              <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                <p className="text-gray-500 italic">Line chart would render here</p>
+          <h2 className="text-xl font-semibold mb-4">Financial Performance Trends</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartContainer title="Revenue & Profit Trends" subtitle="3-Year Performance">
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="actual"
+                      stroke="#8884d8"
+                      name="Actual"
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="predicted"
+                      stroke="#82ca9d"
+                      name="AI Predicted"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </ChartContainer>
-            
-            <ChartContainer title="Profit Margin Forecast (2024)" subtitle="Quarterly projection">
-              <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                <p className="text-gray-500 italic">Line chart would render here</p>
+
+            <ChartContainer title="Profitability Metrics" subtitle="Key Ratios">
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="actual"
+                      stroke="#8884d8"
+                      name="Actual"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </ChartContainer>
           </div>
-          
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {insights.predictions.map((insight, index) => (
-              <div 
-                key={index} 
-                className="bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition-shadow border-l-4 border-purple-500"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold text-lg">{insight.title}</h3>
-                  <div className="flex space-x-2">
-                    {renderImpactBadge(insight.impact)}
-                    {renderTimeframeBadge(insight.timeframe)}
+        </section>
+
+        {/* Risk Analysis */}
+        <section>
+          <h2 className="text-xl font-semibold mb-4">Risk Analysis & Mitigation</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ChartContainer title="Currency Risk Exposure" subtitle="Impact Analysis">
+              <div className="space-y-4 p-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Currency Impact</span>
+                    <span className="font-medium">$343M</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-yellow-400 h-2 rounded-full"
+                      style={{ width: '34.3%' }}
+                    ></div>
                   </div>
                 </div>
-                <p className="text-gray-700 mb-4">{insight.description}</p>
-                <div className="mt-auto pt-2 flex justify-between items-center border-t border-gray-100">
-                  <span className="text-sm text-gray-500">Confidence: 85%</span>
-                  <button className="text-optiml-purple text-sm font-medium hover:underline">
-                    View Details
-                  </button>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Revenue Exposure</span>
+                    <span className="font-medium">1.8%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-yellow-400 h-2 rounded-full"
+                      style={{ width: '1.8%' }}
+                    ></div>
+                  </div>
                 </div>
+              </div>
+            </ChartContainer>
+
+            <ChartContainer title="Operational Risk Metrics" subtitle="Key Indicators">
+              <div className="space-y-4 p-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Debt-to-Equity Ratio</span>
+                    <span className="font-medium">0.94</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-400 h-2 rounded-full"
+                      style={{ width: '94%' }}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Current Ratio</span>
+                    <span className="font-medium">1.23</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-400 h-2 rounded-full"
+                      style={{ width: '82%' }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </ChartContainer>
+          </div>
+        </section>
+
+        {/* AI Insights */}
+        <section>
+          <h2 className="text-xl font-semibold mb-4">Strategic Recommendations</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {aiInsights.map((insight, index) => (
+              <div key={index} className="bg-white rounded-lg shadow-sm p-6 border">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-optiml-light rounded-full">
+                    {getInsightIcon(insight.category)}
+                  </div>
+                  <span className="text-sm text-gray-500">
+                    {(insight.confidence * 100).toFixed(0)}% confidence
+                  </span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">{insight.title}</h3>
+                <p className="text-gray-600 text-sm">{insight.description}</p>
+                {insight.impact && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex justify-between text-sm">
+                      <span>Current {insight.impact.metric}</span>
+                      <span>${insight.impact.value.toLocaleString()}M</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Potential</span>
+                      <span>${insight.impact.potential.toLocaleString()}M</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </section>
-        
-        {/* Implementation Plan */}
+
+        {/* MCP Analysis */}
         <section>
-          <h2 className="text-xl font-semibold mb-4">Recommended Implementation Plan</h2>
-          <ChartContainer title="Action Plan Timeline">
-            <div className="space-y-6">
-              <div className="relative">
-                {/* Timeline line */}
-                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-                
-                {/* Timeline items */}
-                <div className="space-y-8">
-                  {/* Item 1 */}
-                  <div className="relative pl-12">
-                    <div className="absolute left-0 rounded-full bg-optiml-purple w-8 h-8 flex items-center justify-center text-white">
-                      1
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-md mb-2">Short-term Actions (Next 30 days)</h3>
-                      <ul className="list-disc pl-6 space-y-2 text-gray-700">
-                        <li>Initiate supplier consolidation process to reduce procurement costs</li>
-                        <li>Implement accounts receivable policy changes to address cash flow vulnerability</li>
-                        <li>Review competitive pricing strategy in consumer segment</li>
-                      </ul>
-                    </div>
+          <h2 className="text-xl font-semibold mb-4">Market Competitive Position</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartContainer title="MCP Score Components" subtitle="Competitive Metrics">
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={mcpMetrics}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="name" />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                    <Radar
+                      name="Colgate"
+                      dataKey="value"
+                      stroke="#8884d8"
+                      fill="#8884d8"
+                      fillOpacity={0.6}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </ChartContainer>
+
+            <ChartContainer title="Market Position" subtitle="Competitive Analysis">
+              <div className="space-y-4 p-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Overall MCP Score</span>
+                    <span className="font-medium">
+                      {mcpData ? (mcpData.mcpScore.overall * 100).toFixed(1) : 0}%
+                    </span>
                   </div>
-                  
-                  {/* Item 2 */}
-                  <div className="relative pl-12">
-                    <div className="absolute left-0 rounded-full bg-optiml-purple w-8 h-8 flex items-center justify-center text-white">
-                      2
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-md mb-2">Medium-term Actions (1-3 months)</h3>
-                      <ul className="list-disc pl-6 space-y-2 text-gray-700">
-                        <li>Shift product mix to favor higher-margin Product Line B</li>
-                        <li>Begin automation of inventory management processes</li>
-                        <li>Develop strategy to mitigate projected margin compression</li>
-                      </ul>
-                    </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-optiml h-2 rounded-full"
+                      style={{ width: `${mcpData ? mcpData.mcpScore.overall * 100 : 0}%` }}
+                    ></div>
                   </div>
-                  
-                  {/* Item 3 */}
-                  <div className="relative pl-12">
-                    <div className="absolute left-0 rounded-full bg-optiml-purple w-8 h-8 flex items-center justify-center text-white">
-                      3
+                </div>
+
+                <div className="mt-6">
+                  <h3 className="font-medium mb-3">Market Share Distribution</h3>
+                  {mcpData?.competitors.map((competitor: any) => (
+                    <div key={competitor.name} className="mb-3">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>{competitor.name}</span>
+                        <span>{(competitor.marketShare * 100).toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-400 h-2 rounded-full"
+                          style={{ width: `${competitor.marketShare * 100}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-md mb-2">Long-term Initiatives (3-12 months)</h3>
-                      <ul className="list-disc pl-6 space-y-2 text-gray-700">
-                        <li>Conduct market research for Western region expansion</li>
-                        <li>Develop implementation timeline for regional growth strategy</li>
-                        <li>Allocate resources based on projected 17.8% YoY growth trajectory</li>
-                      </ul>
+                  ))}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Colgate</span>
+                      <span>
+                        {mcpData ? (mcpData.mcpScore.marketShare * 100).toFixed(1) : 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-optiml h-2 rounded-full"
+                        style={{ width: `${mcpData ? mcpData.mcpScore.marketShare * 100 : 0}%` }}
+                      ></div>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              <div className="mt-6 bg-blue-50 border border-blue-100 rounded-lg p-4">
-                <h3 className="font-semibold mb-2 text-optiml-purple">Expected Outcomes</h3>
-                <p className="text-gray-700">
-                  Implementing these recommendations in sequence is projected to result in a 5.3% 
-                  revenue increase within 90 days, 8.8% within 180 days, and full 9.7% improvement 
-                  within 12 months, while increasing profit margins by 3.2 percentage points.
-                </p>
-              </div>
-            </div>
-          </ChartContainer>
+            </ChartContainer>
+          </div>
         </section>
+
+        <Tabs defaultValue="trends" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="trends">Trend Analysis</TabsTrigger>
+            <TabsTrigger value="performance">Performance Metrics</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="trends" className="bg-white/50 backdrop-blur-sm p-4 rounded-lg">
+            <h2 className="text-xl font-semibold mb-4 text-[#5046e4]">Revenue Trend Analysis</h2>
+            <LineChart width={800} height={400} data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="actual" stroke="#5046e4" name="Actual" />
+              <Line type="monotone" dataKey="predicted" stroke="#82ca9d" name="AI Predicted" />
+            </LineChart>
+          </TabsContent>
+
+          <TabsContent value="performance" className="bg-white/50 backdrop-blur-sm p-4 rounded-lg">
+            <h2 className="text-xl font-semibold mb-4 text-[#5046e4]">Performance vs Targets</h2>
+            <BarChart width={800} height={400} data={performanceData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="metric" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="current" fill="#5046e4" name="Current" />
+              <Bar dataKey="target" fill="#82ca9d" name="AI Target" />
+            </BarChart>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

@@ -1,9 +1,8 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import ContactPage from "./pages/ContactPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -18,14 +17,14 @@ import ReportsDashboard from "./pages/dashboards/ReportsDashboard";
 const queryClient = new QueryClient();
 
 // Authentication check for protected routes
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const isAnalysisComplete = sessionStorage.getItem("isAnalysisComplete") === "true";
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const accessToken = sessionStorage.getItem('accessToken');
   
-  if (!isAnalysisComplete) {
-    return <AccessDeniedPage />;
+  if (!accessToken) {
+    return <Navigate to="/" />;
   }
   
-  return children;
+  return <>{children}</>;
 };
 
 const App = () => (
